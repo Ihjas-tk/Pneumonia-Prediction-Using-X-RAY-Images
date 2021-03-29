@@ -1,0 +1,352 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {
+    "_cell_guid": "b1076dfc-b9ad-4769-8c92-a6c4dae69d19",
+    "_uuid": "8f2839f25d086af736a60e9eeb907d3b93b6e0e5"
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "['Face_and_Smile_Detection', '.DS_Store', 'CSS', 'Object_Detection_Using_SSD', 'Commands.rtf', 'Face_Detection', 'mini_example', 'Pneumonia_Prediction_using_X-RAY_images']\n"
+     ]
+    }
+   ],
+   "source": [
+    "\n",
+    "import numpy as np # forlinear algebra\n",
+    "import os\n",
+    "from PIL import Image\n",
+    "print(os.listdir(\"../\"))\n",
+    "\n",
+    "# Keras Libraries\n",
+    "import tensorflow.keras\n",
+    "from tensorflow.keras.models import Sequential\n",
+    "from tensorflow.keras.layers import Conv2D\n",
+    "from tensorflow.keras.layers import MaxPooling2D\n",
+    "from tensorflow.keras.layers import Flatten\n",
+    "from tensorflow.keras.layers import Dense\n",
+    "from tensorflow.keras.preprocessing.image import ImageDataGenerator, load_img"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {
+    "_cell_guid": "79c7e3d0-c299-4dcb-8224-4455121ee9b0",
+    "_uuid": "d629ff2d2480ee46fbb7e2d37f6b5fab8052498a"
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "['.DS_Store', 'test', 'train', 'val']\n"
+     ]
+    }
+   ],
+   "source": [
+    "mainDIR = os.listdir('chest_xray/chest_xray')\n",
+    "print(mainDIR)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {
+    "_uuid": "6668dbb0df4eabcfc2b03988121efd344e8ac8d9"
+   },
+   "outputs": [],
+   "source": [
+    "train_folder= 'chest_xray/chest_xray/train/'\n",
+    "val_folder = 'chest_xray/chest_xray/val/'\n",
+    "test_folder = 'chest_xray/chest_xray/test/'"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {
+    "_uuid": "ec6cbf95249e12579bda6894ad48c8ec3333c023"
+   },
+   "outputs": [],
+   "source": [
+    "# train \n",
+    "os.listdir(train_folder)\n",
+    "train_n = train_folder+'NORMAL/'\n",
+    "train_p = train_folder+'PNEUMONIA/'"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {
+    "_uuid": "09cb0ddc4c955d29cc09ff0611983a5bdb107273"
+   },
+   "outputs": [],
+   "source": [
+    "# let's build the CNN model\n",
+    "\n",
+    "cnn = Sequential()\n",
+    "\n",
+    "#Convolution\n",
+    "cnn.add(Conv2D(32, (3, 3), activation=\"relu\", input_shape=(64, 64, 3)))\n",
+    "\n",
+    "#Pooling\n",
+    "cnn.add(MaxPooling2D(pool_size = (2, 2)))\n",
+    "\n",
+    "# 2nd Convolution\n",
+    "cnn.add(Conv2D(32, (3, 3), activation=\"relu\"))\n",
+    "\n",
+    "# 2nd Pooling layer\n",
+    "cnn.add(MaxPooling2D(pool_size = (2, 2)))\n",
+    "\n",
+    "# Flatten the layer\n",
+    "cnn.add(Flatten())\n",
+    "\n",
+    "# Fully Connected Layers\n",
+    "cnn.add(Dense(activation = 'relu', units = 128))\n",
+    "cnn.add(Dense(activation = 'sigmoid', units = 1))\n",
+    "\n",
+    "# Compile the Neural network\n",
+    "cnn.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy'])\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "num_of_test_samples = 600\n",
+    "batch_size = 32"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {
+    "_uuid": "8618aa4b370306a8f5be8644e278810f42f05c89",
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Found 5216 images belonging to 2 classes.\n",
+      "Found 16 images belonging to 2 classes.\n",
+      "Found 624 images belonging to 2 classes.\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Fitting the CNN to the images\n",
+    "# The function ImageDataGenerator augments your image by iterating through image as your CNN is getting ready to process that image\n",
+    "\n",
+    "train_datagen = ImageDataGenerator(rescale = 1./255,\n",
+    "                                   shear_range = 0.2,\n",
+    "                                   zoom_range = 0.2,\n",
+    "                                   horizontal_flip = True)\n",
+    "\n",
+    "test_datagen = ImageDataGenerator(rescale = 1./255)  #Image normalization.\n",
+    "\n",
+    "training_set = train_datagen.flow_from_directory('chest_xray/chest_xray/train',\n",
+    "                                                 target_size = (64, 64),\n",
+    "                                                 batch_size = 32,\n",
+    "                                                 class_mode = 'binary')\n",
+    "\n",
+    "validation_generator = test_datagen.flow_from_directory('chest_xray/chest_xray/val/',\n",
+    "    target_size=(64, 64),\n",
+    "    batch_size=32,\n",
+    "    class_mode='binary')\n",
+    "\n",
+    "test_set = test_datagen.flow_from_directory('chest_xray/chest_xray/test',\n",
+    "                                            target_size = (64, 64),\n",
+    "                                            batch_size = 32,\n",
+    "                                            class_mode = 'binary')\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {
+    "_uuid": "3bb0beb011d025b08e25e77315ea9f15c012f0c2"
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Model: \"sequential\"\n",
+      "_________________________________________________________________\n",
+      "Layer (type)                 Output Shape              Param #   \n",
+      "=================================================================\n",
+      "conv2d (Conv2D)              (None, 62, 62, 32)        896       \n",
+      "_________________________________________________________________\n",
+      "max_pooling2d (MaxPooling2D) (None, 31, 31, 32)        0         \n",
+      "_________________________________________________________________\n",
+      "conv2d_1 (Conv2D)            (None, 29, 29, 32)        9248      \n",
+      "_________________________________________________________________\n",
+      "max_pooling2d_1 (MaxPooling2 (None, 14, 14, 32)        0         \n",
+      "_________________________________________________________________\n",
+      "flatten (Flatten)            (None, 6272)              0         \n",
+      "_________________________________________________________________\n",
+      "dense (Dense)                (None, 128)               802944    \n",
+      "_________________________________________________________________\n",
+      "dense_1 (Dense)              (None, 1)                 129       \n",
+      "=================================================================\n",
+      "Total params: 813,217\n",
+      "Trainable params: 813,217\n",
+      "Non-trainable params: 0\n",
+      "_________________________________________________________________\n"
+     ]
+    }
+   ],
+   "source": [
+    "cnn.summary()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {
+    "_uuid": "81aa075d45f40d9220ab40b6e2dad6fbb22f4afa",
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/Users/ihjas/miniforge3/envs/web/lib/python3.8/site-packages/tensorflow/python/keras/engine/training.py:1844: UserWarning: `Model.fit_generator` is deprecated and will be removed in a future version. Please use `Model.fit`, which supports generators.\n",
+      "  warnings.warn('`Model.fit_generator` is deprecated and '\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "163/163 [==============================] - ETA: 0s - loss: 0.4613 - accuracy: 0.7747WARNING:tensorflow:Your input ran out of data; interrupting training. Make sure that your dataset or generator can generate at least `steps_per_epoch * epochs` batches (in this case, 624 batches). You may need to use the repeat() function when building your dataset.\n",
+      "163/163 [==============================] - 29s 174ms/step - loss: 0.4606 - accuracy: 0.7751 - val_loss: 0.6005 - val_accuracy: 0.6875\n"
+     ]
+    }
+   ],
+   "source": [
+    "cnn_model = cnn.fit_generator(training_set,\n",
+    "                         steps_per_epoch = 163,\n",
+    "                         epochs = 1,\n",
+    "                         validation_data = validation_generator,\n",
+    "                         validation_steps = 624)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {
+    "_uuid": "47d2bddcdbeeddfc4b21a58f811f8351ad9a880a"
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/Users/ihjas/miniforge3/envs/web/lib/python3.8/site-packages/tensorflow/python/keras/engine/training.py:1877: UserWarning: `Model.evaluate_generator` is deprecated and will be removed in a future version. Please use `Model.evaluate`, which supports generators.\n",
+      "  warnings.warn('`Model.evaluate_generator` is deprecated and '\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "WARNING:tensorflow:Your input ran out of data; interrupting training. Make sure that your dataset or generator can generate at least `steps_per_epoch * epochs` batches (in this case, 624 batches). You may need to use the repeat() function when building your dataset.\n"
+     ]
+    }
+   ],
+   "source": [
+    "test_accu = cnn.evaluate_generator(test_set,steps=624)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {
+    "_uuid": "7be33c14d0b10060194bacf774b161abab4a0875"
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "The testing accuracy is : 84.13461446762085 %\n"
+     ]
+    }
+   ],
+   "source": [
+    "print('The testing accuracy is :',test_accu[1]*100, '%')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "cnn.save('mymodel.h5')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {},
+   "outputs": [
+    {
+     "ename": "AttributeError",
+     "evalue": "'str' object has no attribute 'decode'",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mAttributeError\u001b[0m                            Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-15-312d4d3f0b5b>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m\u001b[0m\n\u001b[1;32m      1\u001b[0m \u001b[0;32mfrom\u001b[0m \u001b[0mtensorflow\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mkeras\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mmodels\u001b[0m \u001b[0;32mimport\u001b[0m \u001b[0mload_model\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m----> 2\u001b[0;31m \u001b[0mmodel\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mload_model\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'mymodel.h5'\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[0;32m~/miniforge3/envs/web/lib/python3.8/site-packages/tensorflow/python/keras/saving/save.py\u001b[0m in \u001b[0;36mload_model\u001b[0;34m(filepath, custom_objects, compile, options)\u001b[0m\n\u001b[1;32m    204\u001b[0m       if (h5py is not None and\n\u001b[1;32m    205\u001b[0m           (isinstance(filepath, h5py.File) or h5py.is_hdf5(filepath))):\n\u001b[0;32m--> 206\u001b[0;31m         return hdf5_format.load_model_from_hdf5(filepath, custom_objects,\n\u001b[0m\u001b[1;32m    207\u001b[0m                                                 compile)\n\u001b[1;32m    208\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m~/miniforge3/envs/web/lib/python3.8/site-packages/tensorflow/python/keras/saving/hdf5_format.py\u001b[0m in \u001b[0;36mload_model_from_hdf5\u001b[0;34m(filepath, custom_objects, compile)\u001b[0m\n\u001b[1;32m    180\u001b[0m     \u001b[0;32mif\u001b[0m \u001b[0mmodel_config\u001b[0m \u001b[0;32mis\u001b[0m \u001b[0;32mNone\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    181\u001b[0m       \u001b[0;32mraise\u001b[0m \u001b[0mValueError\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'No model found in config file.'\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 182\u001b[0;31m     \u001b[0mmodel_config\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mjson_utils\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mdecode\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mmodel_config\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mdecode\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'utf-8'\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    183\u001b[0m     model = model_config_lib.model_from_config(model_config,\n\u001b[1;32m    184\u001b[0m                                                custom_objects=custom_objects)\n",
+      "\u001b[0;31mAttributeError\u001b[0m: 'str' object has no attribute 'decode'"
+     ]
+    }
+   ],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.8.6"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}
